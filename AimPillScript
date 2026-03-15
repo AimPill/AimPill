@@ -1,46 +1,42 @@
 local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
 local player = Players.LocalPlayer
 
--- VERROU GLOBAL (empêche double exécution)
-if _G.AimPillLoaded then
-	return
-end
-_G.AimPillLoaded = true
-
--- supprimer ancien menu si il existe
+-- Prevent double UI
 if player.PlayerGui:FindFirstChild("AimPillUI") then
 	player.PlayerGui:FindFirstChild("AimPillUI"):Destroy()
 end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "AimPillUI"
-gui.Parent = player:WaitForChild("PlayerGui")
-gui.ResetOnSpawn = false
-local UIS = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-
-local player = Players.LocalPlayer
-local camera = workspace.CurrentCamera
-
-local gui = Instance.new("ScreenGui")
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = player.PlayerGui
 gui.ResetOnSpawn = false
 
 -- MAIN
 local main = Instance.new("Frame",gui)
 main.Size = UDim2.new(0,720,0,420)
 main.Position = UDim2.new(0.5,-360,0.5,-210)
-main.BackgroundColor3 = Color3.fromRGB(17,17,17)
+main.BackgroundColor3 = Color3.fromRGB(18,18,18)
 main.Active = true
 main.Draggable = true
-
 Instance.new("UICorner",main).CornerRadius = UDim.new(0,12)
 
-local stroke = Instance.new("UIStroke",main)
-stroke.Color = Color3.fromRGB(0,170,255)
-stroke.Thickness = 2
+-- GLOW
+local glow = Instance.new("UIStroke",main)
+glow.Thickness = 2
+glow.Color = Color3.fromRGB(0,170,255)
+
+-- Animated glow
+task.spawn(function()
+	while true do
+		TweenService:Create(glow,TweenInfo.new(2),{Color=Color3.fromRGB(0,200,255)}):Play()
+		wait(2)
+		TweenService:Create(glow,TweenInfo.new(2),{Color=Color3.fromRGB(0,120,255)}):Play()
+		wait(2)
+	end
+end)
 
 -- TOPBAR
 local top = Instance.new("Frame",main)
@@ -58,34 +54,74 @@ title.TextColor3 = Color3.new(1,1,1)
 -- SIDEBAR
 local sidebar = Instance.new("Frame",main)
 sidebar.Position = UDim2.new(0,0,0,40)
-sidebar.Size = UDim2.new(0,190,1,-40)
+sidebar.Size = UDim2.new(0,180,1,-40)
 sidebar.BackgroundColor3 = Color3.fromRGB(22,22,22)
 
 -- CONTENT
 local content = Instance.new("Frame",main)
-content.Position = UDim2.new(0,190,0,40)
-content.Size = UDim2.new(1,-190,1,-40)
+content.Position = UDim2.new(0,180,0,40)
+content.Size = UDim2.new(1,-180,1,-40)
 content.BackgroundTransparency = 1
 
 -- PAGE CREATOR
 local function createPage()
-
-	local page = Instance.new("Frame")
-	page.Parent = content
+	local page = Instance.new("Frame",content)
 	page.Size = UDim2.new(1,0,1,0)
 	page.Visible = false
 	page.BackgroundTransparency = 1
-
 	return page
 end
 
-local aimPage = createPage()
+local aimbotPage = createPage()
 local skinPage = createPage()
 local settingsPage = createPage()
 
--- PAGE TEXT
-local function centerText(page,text)
+-- SWITCH PAGE
+local function switchPage(page)
+	for _,v in pairs(content:GetChildren()) do
+		if v:IsA("Frame") then
+			v.Visible=false
+		end
+	end
+	page.Visible=true
+end
 
+-- SIDEBAR BUTTON
+local function createButton(name,pos,page)
+
+	local btn = Instance.new("TextButton",sidebar)
+	btn.Size = UDim2.new(1,-20,0,40)
+	btn.Position = UDim2.new(0,10,0,pos)
+	btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+	btn.Text = name
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 14
+	btn.TextColor3 = Color3.new(1,1,1)
+
+	Instance.new("UICorner",btn)
+
+	btn.MouseEnter:Connect(function()
+		TweenService:Create(btn,TweenInfo.new(0.2),
+		{BackgroundColor3 = Color3.fromRGB(0,170,255)}):Play()
+	end)
+
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(btn,TweenInfo.new(0.2),
+		{BackgroundColor3 = Color3.fromRGB(35,35,35)}):Play()
+	end)
+
+	btn.MouseButton1Click:Connect(function()
+		switchPage(page)
+	end)
+
+end
+
+createButton("AimBot",20,aimbotPage)
+createButton("Skin Changer",70,skinPage)
+createButton("Settings",120,settingsPage)
+
+-- PLACEHOLDER TEXT
+local function centerText(page,text)
 	local label = Instance.new("TextLabel",page)
 	label.AnchorPoint = Vector2.new(0.5,0.5)
 	label.Position = UDim2.new(0.5,0,0.5,0)
@@ -95,377 +131,99 @@ local function centerText(page,text)
 	label.Font = Enum.Font.GothamBold
 	label.TextSize = 28
 	label.TextColor3 = Color3.new(1,1,1)
-
 end
 
+centerText(aimbotPage,"COMING SOON...")
 centerText(skinPage,"COMING SOON...")
-centerText(settingsPage,".gg/AimPill")
 
--- SWITCH PAGE
-local function switchPage(page)
+-- SETTINGS SLIDERS
+local function createSlider(name,default,min,max,pos)
 
-	for _,v in pairs(content:GetChildren()) do
-		if v:IsA("Frame") then
-			v.Visible=false
-		end
-	end
+	local value = default
 
-	page.Visible=true
+	local frame = Instance.new("Frame",settingsPage)
+	frame.Size = UDim2.new(0,300,0,50)
+	frame.Position = UDim2.new(0,20,0,pos)
+	frame.BackgroundColor3 = Color3.fromRGB(35,35,35)
 
-	page.Position = UDim2.new(0,40,0,0)
+	Instance.new("UICorner",frame)
 
-	TweenService:Create(page,TweenInfo.new(0.25),
-	{Position = UDim2.new(0,0,0,0)}):Play()
-
-end
-
--- SIDEBAR BUTTON
-local function createButton(text,pos,page)
-
-	local btn = Instance.new("TextButton",sidebar)
-	btn.Size = UDim2.new(1,-20,0,40)
-	btn.Position = UDim2.new(0,10,0,pos)
-	btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
-	btn.Text = text
-	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 14
-	btn.TextColor3 = Color3.new(1,1,1)
-
-	Instance.new("UICorner",btn)
-
-	btn.MouseEnter:Connect(function()
-
-		TweenService:Create(btn,TweenInfo.new(0.15),
-		{BackgroundColor3 = Color3.fromRGB(0,170,255)}):Play()
-
-	end)
-
-	btn.MouseLeave:Connect(function()
-
-		TweenService:Create(btn,TweenInfo.new(0.15),
-		{BackgroundColor3 = Color3.fromRGB(35,35,35)}):Play()
-
-	end)
-
-	btn.MouseButton1Click:Connect(function()
-		switchPage(page)
-	end)
-
-end
-
-createButton("AimBot",20,aimPage)
-createButton("Skin Changer",70,skinPage)
-createButton("Settings",120,settingsPage)
-
--- AIMBOT TOGGLE
-local enabled=false
-
-local aimButton = Instance.new("TextButton",aimPage)
-aimButton.Size = UDim2.new(0,220,0,40)
-aimButton.Position = UDim2.new(0,20,0,20)
-aimButton.BackgroundColor3 = Color3.fromRGB(0,0,0)
-aimButton.Text = "Legit Bot"
-aimButton.Font = Enum.Font.GothamBold
-aimButton.TextSize = 14
-aimButton.TextColor3 = Color3.new(1,1,1)
-
-Instance.new("UICorner",aimButton)
-
-aimButton.MouseButton1Click:Connect(function()
-
-	enabled = not enabled
-
-	aimButton.BackgroundColor3 =
-	enabled and Color3.fromRGB(0,170,255)
-	or Color3.fromRGB(0,0,0)
-
-end)
-
--- FIND CLOSEST HUMANOID
-local function getClosestHumanoid()
-
-	local closest = nil
-	local shortest = math.huge
-
-	local char = player.Character
-	if not char then return nil end
-
-	local root = char:FindFirstChild("HumanoidRootPart")
-	if not root then return nil end
-
-	for _,v in pairs(workspace:GetDescendants()) do
-
-		if v:IsA("Humanoid") and v.Parent ~= char then
-
-			local targetRoot = v.Parent:FindFirstChild("HumanoidRootPart")
-
-			if targetRoot then
-
-				local dist = (root.Position - targetRoot.Position).Magnitude
-
-				if dist < shortest then
-					shortest = dist
-					closest = targetRoot
-				end
-
-			end
-		end
-	end
-
-	return closest
-end
-
--- AIMBOT TRAINING
-local UIS = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-
-local player = Players.LocalPlayer
-local camera = workspace.CurrentCamera
-
-local gui = Instance.new("ScreenGui")
-gui.Parent = player:WaitForChild("PlayerGui")
-gui.ResetOnSpawn = false
-
--- MAIN
-local main = Instance.new("Frame",gui)
-main.Size = UDim2.new(0,720,0,420)
-main.Position = UDim2.new(0.5,-360,0.5,-210)
-main.BackgroundColor3 = Color3.fromRGB(17,17,17)
-main.Active = true
-main.Draggable = true
-
-Instance.new("UICorner",main).CornerRadius = UDim.new(0,12)
-
-local stroke = Instance.new("UIStroke",main)
-stroke.Color = Color3.fromRGB(0,170,255)
-stroke.Thickness = 2
-
--- TOPBAR
-local top = Instance.new("Frame",main)
-top.Size = UDim2.new(1,0,0,40)
-top.BackgroundColor3 = Color3.fromRGB(25,25,25)
-
-local title = Instance.new("TextLabel",top)
-title.Size = UDim2.new(1,0,1,0)
-title.BackgroundTransparency = 1
-title.Text = "AimPill 💊"
-title.Font = Enum.Font.GothamBold
-title.TextSize = 18
-title.TextColor3 = Color3.new(1,1,1)
-
--- SIDEBAR
-local sidebar = Instance.new("Frame",main)
-sidebar.Position = UDim2.new(0,0,0,40)
-sidebar.Size = UDim2.new(0,190,1,-40)
-sidebar.BackgroundColor3 = Color3.fromRGB(22,22,22)
-
--- CONTENT
-local content = Instance.new("Frame",main)
-content.Position = UDim2.new(0,190,0,40)
-content.Size = UDim2.new(1,-190,1,-40)
-content.BackgroundTransparency = 1
-
--- PAGE CREATOR
-local function createPage()
-
-	local page = Instance.new("Frame")
-	page.Parent = content
-	page.Size = UDim2.new(1,0,1,0)
-	page.Visible = false
-	page.BackgroundTransparency = 1
-
-	return page
-end
-
-local aimPage = createPage()
-local skinPage = createPage()
-local settingsPage = createPage()
-
--- PAGE TEXT
-local function centerText(page,text)
-
-	local label = Instance.new("TextLabel",page)
-	label.AnchorPoint = Vector2.new(0.5,0.5)
-	label.Position = UDim2.new(0.5,0,0.5,0)
-	label.Size = UDim2.new(0.7,0,0.2,0)
+	local label = Instance.new("TextLabel",frame)
+	label.Size = UDim2.new(1,0,0,20)
 	label.BackgroundTransparency = 1
-	label.Text = text
-	label.Font = Enum.Font.GothamBold
-	label.TextSize = 28
+	label.Text = name.." : "..value
+	label.Font = Enum.Font.Gotham
 	label.TextColor3 = Color3.new(1,1,1)
 
-end
+	local bar = Instance.new("Frame",frame)
+	bar.Size = UDim2.new(1,-20,0,6)
+	bar.Position = UDim2.new(0,10,0,30)
+	bar.BackgroundColor3 = Color3.fromRGB(60,60,60)
 
-centerText(skinPage,"COMING SOON...")
-centerText(settingsPage,".gg/AimPill")
+	Instance.new("UICorner",bar)
 
--- SWITCH PAGE
-local function switchPage(page)
+	local fill = Instance.new("Frame",bar)
+	fill.Size = UDim2.new((value-min)/(max-min),0,1,0)
+	fill.BackgroundColor3 = Color3.fromRGB(0,170,255)
 
-	for _,v in pairs(content:GetChildren()) do
-		if v:IsA("Frame") then
-			v.Visible=false
+	local dragging=false
+
+	bar.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging=true
 		end
-	end
-
-	page.Visible=true
-
-	page.Position = UDim2.new(0,40,0,0)
-
-	TweenService:Create(page,TweenInfo.new(0.25),
-	{Position = UDim2.new(0,0,0,0)}):Play()
-
-end
-
--- SIDEBAR BUTTON
-local function createButton(text,pos,page)
-
-	local btn = Instance.new("TextButton",sidebar)
-	btn.Size = UDim2.new(1,-20,0,40)
-	btn.Position = UDim2.new(0,10,0,pos)
-	btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
-	btn.Text = text
-	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 14
-	btn.TextColor3 = Color3.new(1,1,1)
-
-	Instance.new("UICorner",btn)
-
-	btn.MouseEnter:Connect(function()
-
-		TweenService:Create(btn,TweenInfo.new(0.15),
-		{BackgroundColor3 = Color3.fromRGB(0,170,255)}):Play()
-
 	end)
 
-	btn.MouseLeave:Connect(function()
-
-		TweenService:Create(btn,TweenInfo.new(0.15),
-		{BackgroundColor3 = Color3.fromRGB(35,35,35)}):Play()
-
+	UIS.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging=false
+		end
 	end)
 
-	btn.MouseButton1Click:Connect(function()
-		switchPage(page)
-	end)
+	UIS.InputChanged:Connect(function(input)
 
-end
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
 
-createButton("AimBot",20,aimPage)
-createButton("Skin Changer",70,skinPage)
-createButton("Settings",120,settingsPage)
+			local percent = math.clamp(
+				(input.Position.X - bar.AbsolutePosition.X)/bar.AbsoluteSize.X,
+				0,1)
 
--- AIMBOT TOGGLE
-local enabled=false
+			fill.Size = UDim2.new(percent,0,1,0)
 
-local aimButton = Instance.new("TextButton",aimPage)
-aimButton.Size = UDim2.new(0,220,0,40)
-aimButton.Position = UDim2.new(0,20,0,20)
-aimButton.BackgroundColor3 = Color3.fromRGB(0,0,0)
-aimButton.Text = "Aimbot (Training)"
-aimButton.Font = Enum.Font.GothamBold
-aimButton.TextSize = 14
-aimButton.TextColor3 = Color3.new(1,1,1)
+			value = math.floor(min + (max-min)*percent)
 
-Instance.new("UICorner",aimButton)
+			label.Text = name.." : "..value
 
-aimButton.MouseButton1Click:Connect(function()
+			local char = player.Character
+			local humanoid = char and char:FindFirstChildOfClass("Humanoid")
 
-	enabled = not enabled
-
-	aimButton.BackgroundColor3 =
-	enabled and Color3.fromRGB(0,170,255)
-	or Color3.fromRGB(0,0,0)
-
-end)
-
--- FIND CLOSEST HUMANOID
-local function getClosestHumanoid()
-
-	local closest = nil
-	local shortest = math.huge
-
-	local char = player.Character
-	if not char then return nil end
-
-	local root = char:FindFirstChild("HumanoidRootPart")
-	if not root then return nil end
-
-	for _,v in pairs(workspace:GetDescendants()) do
-
-		if v:IsA("Humanoid") and v.Parent ~= char then
-
-			local targetRoot = v.Parent:FindFirstChild("HumanoidRootPart")
-
-			if targetRoot then
-
-				local dist = (root.Position - targetRoot.Position).Magnitude
-
-				if dist < shortest then
-					shortest = dist
-					closest = targetRoot
+			if humanoid then
+				if name=="WalkSpeed" then
+					humanoid.WalkSpeed = value
 				end
-
+				if name=="JumpPower" then
+					humanoid.JumpPower = value
+				end
 			end
-		end
-	end
 
-	return closest
+		end
+
+	end)
+
 end
 
--- AIMBOT TRAINING
-RunService.RenderStepped:Connect(function()
+createSlider("WalkSpeed",16,1,100,20)
+createSlider("JumpPower",50,1,100,100)
 
-	if not enabled then return end
-
-	local char = player.Character
-	local root = char and char:FindFirstChild("HumanoidRootPart")
-
-	if not root then return end
-
-	local target = getClosestHumanoid()
-
-	if target then
-
-		local pos = target.Position
-
-		root.CFrame = CFrame.new(root.Position,
-		Vector3.new(pos.X,root.Position.Y,pos.Z))
-
-		camera.CFrame = CFrame.new(camera.CFrame.Position,pos)
-
-	end
-
-end)
-
-switchPage(aimPage)
+switchPage(aimbotPage)
 
 -- MENU TOGGLE
 local open=true
 
 UIS.InputBegan:Connect(function(input,gpe)
-
 	if gpe then return end
-
 	if input.KeyCode == Enum.KeyCode.RightShift then
 		open = not open
 		main.Visible=open
 	end
-
-end)
-
--- MENU TOGGLE
-local open=true
-
-UIS.InputBegan:Connect(function(input,gpe)
-
-	if gpe then return end
-
-	if input.KeyCode == Enum.KeyCode.RightShift then
-		open = not open
-		main.Visible=open
-	end
-
 end)
