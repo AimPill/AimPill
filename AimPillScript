@@ -1,9 +1,15 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- empêcher double menu
-if player.PlayerGui:FindFirstChild("AimPillUI") then
+-- VERROU GLOBAL (empêche double exécution)
+if _G.AimPillLoaded then
 	return
+end
+_G.AimPillLoaded = true
+
+-- supprimer ancien menu si il existe
+if player.PlayerGui:FindFirstChild("AimPillUI") then
+	player.PlayerGui:FindFirstChild("AimPillUI"):Destroy()
 end
 
 local gui = Instance.new("ScreenGui")
