@@ -1,0 +1,176 @@
+local TweenService = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+local gui = Instance.new("ScreenGui")
+gui.Parent = player:WaitForChild("PlayerGui")
+gui.ResetOnSpawn = false
+
+local main = Instance.new("Frame")
+main.Parent = gui
+main.Size = UDim2.new(0,720,0,420)
+main.Position = UDim2.new(0.5,-360,0.5,-210)
+main.BackgroundColor3 = Color3.fromRGB(18,18,18)
+main.Active = true
+main.Draggable = true
+Instance.new("UICorner",main).CornerRadius = UDim.new(0,8)
+
+local glow = Instance.new("UIStroke",main)
+glow.Color = Color3.fromRGB(0,170,255)
+glow.Thickness = 2
+
+local top = Instance.new("Frame",main)
+top.Size = UDim2.new(1,0,0,40)
+top.BackgroundColor3 = Color3.fromRGB(25,25,25)
+
+local title = Instance.new("TextLabel",top)
+title.BackgroundTransparency = 1
+title.Position = UDim2.new(0,15,0,0)
+title.Size = UDim2.new(0,300,1,0)
+title.Text = "AimPill 💊"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+local sidebar = Instance.new("Frame",main)
+sidebar.Position = UDim2.new(0,0,0,40)
+sidebar.Size = UDim2.new(0,170,1,-40)
+sidebar.BackgroundColor3 = Color3.fromRGB(20,20,20)
+
+local content = Instance.new("Frame",main)
+content.Position = UDim2.new(0,170,0,40)
+content.Size = UDim2.new(1,-170,1,-40)
+content.BackgroundTransparency = 1
+
+local function createPage()
+	local page = Instance.new("Frame")
+	page.Parent = content
+	page.Size = UDim2.new(1,0,1,0)
+	page.Visible = false
+	page.BackgroundTransparency = 1
+	return page
+end
+
+local aimbotPage = createPage()
+local skinPage = createPage()
+local settingsPage = createPage()
+
+local function centerLabel(parent,text)
+	local label = Instance.new("TextLabel",parent)
+	label.AnchorPoint = Vector2.new(0.5,0.5)
+	label.Position = UDim2.new(0.5,0,0.5,0)
+	label.Size = UDim2.new(0.8,0,0.3,0)
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 28
+	label.TextColor3 = Color3.fromRGB(255,255,255)
+end
+
+centerLabel(skinPage,"COMING SOON...")
+centerLabel(settingsPage,".gg/AimPill")
+
+local function switchPage(page)
+	for _,v in pairs(content:GetChildren()) do
+		if v:IsA("Frame") then
+			v.Visible = false
+		end
+	end
+	page.Position = UDim2.new(0,40,0,0)
+	page.Visible = true
+	TweenService:Create(page,TweenInfo.new(0.25),{Position = UDim2.new(0,0,0,0)}):Play()
+end
+
+local function createButton(name,pos,page)
+	local btn = Instance.new("TextButton",sidebar)
+	btn.Size = UDim2.new(1,-20,0,40)
+	btn.Position = UDim2.new(0,10,0,pos)
+	btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+	btn.Text = name
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 14
+	btn.TextColor3 = Color3.fromRGB(255,255,255)
+	Instance.new("UICorner",btn).CornerRadius = UDim.new(0,6)
+
+	btn.MouseEnter:Connect(function()
+		TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3 = Color3.fromRGB(0,170,255)}):Play()
+	end)
+
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3 = Color3.fromRGB(35,35,35)}):Play()
+	end)
+
+	btn.MouseButton1Click:Connect(function()
+		switchPage(page)
+	end)
+end
+
+createButton("AimBot",20,aimbotPage)
+createButton("Skin Changer",70,skinPage)
+createButton("Settings",120,settingsPage)
+
+local aimbotEnabled = false
+
+local aimbotButton = Instance.new("TextButton",aimbotPage)
+aimbotButton.Size = UDim2.new(0,200,0,45)
+aimbotButton.Position = UDim2.new(0,40,0,40)
+aimbotButton.BackgroundColor3 = Color3.fromRGB(0,0,0)
+aimbotButton.Text = "AimBot"
+aimbotButton.Font = Enum.Font.GothamBold
+aimbotButton.TextSize = 16
+aimbotButton.TextColor3 = Color3.fromRGB(255,255,255)
+Instance.new("UICorner",aimbotButton).CornerRadius = UDim.new(0,6)
+
+aimbotButton.MouseButton1Click:Connect(function()
+	aimbotEnabled = not aimbotEnabled
+	if aimbotEnabled then
+		aimbotButton.BackgroundColor3 = Color3.fromRGB(0,170,255)
+	else
+		aimbotButton.BackgroundColor3 = Color3.fromRGB(0,0,0)
+	end
+end)
+
+local function getClosestPlayer()
+	local closest
+	local shortest = math.huge
+
+	for _,plr in pairs(Players:GetPlayers()) do
+		if plr ~= player and plr.Character then
+			local head = plr.Character:FindFirstChild("Head")
+			if head then
+				local dist = (head.Position - camera.CFrame.Position).Magnitude
+				if dist < shortest then
+					shortest = dist
+					closest = head
+				end
+			end
+		end
+	end
+
+	return closest
+end
+
+RunService.RenderStepped:Connect(function()
+	if not aimbotEnabled then return end
+	local target = getClosestPlayer()
+	if target then
+		camera.CFrame = CFrame.new(camera.CFrame.Position, target.Position)
+	end
+end)
+
+switchPage(aimbotPage)
+
+local open = true
+
+UIS.InputBegan:Connect(function(input,gpe)
+	if gpe then return end
+	if input.KeyCode == Enum.KeyCode.RightShift then
+		open = not open
+		main.Visible = open
+	end
+end)
